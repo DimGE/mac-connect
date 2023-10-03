@@ -72,9 +72,9 @@ export class HomePage implements OnInit {
     // }
 
     try {
-
       const result = await this.bleClient.requestDevice();
       console.log('start')
+      console.log(JSON.stringify(result))
       console.log(result.name)
       console.log(result.deviceId)
       console.log(result.uuids)
@@ -100,13 +100,15 @@ export class HomePage implements OnInit {
 
       const res = await this.bleClient.read(macAddress, this.service, this.read)
 
+      this.decodeJ1939(res)
+      this.decodeJ1708(res)
+      console.log('parseData: ', this.parseData(res))
+
       console.log('res 1 - ', res.getUint8(0))
-      console.log('res 2 - ', JSON.stringify(res))
+      console.log('res 2 - ', res)
       // Подписываемся на изменения и получаем данные по J1939
-      await this.bleClient.startNotifications(macAddress,this.service,this.read,(res)=>{
-        console.log('current heart rate', this.parseData(res));
-      });
-      //
+
+
       // this.bleClient.addListener('notifications', (notification) => {
       //   const value = notification.value;
       //   console.log('Получены данные J1939:', value);
@@ -126,6 +128,28 @@ export class HomePage implements OnInit {
       console.error('Ошибка Bluetooth:', error);
     }
   }
+
+  async notification() {
+    const macAddress: string = 'FC:29:99:B8:78:0E';
+    await this.bleClient.startNotifications(macAddress, this.service, this.read, (res) => {
+      console.log('current heart rate', this.parseData(res));
+      this.decodeJ1939(res)
+      this.decodeJ1708(res)
+    });
+  }
+  async getServices(){
+    const macAddress: string = 'FC:29:99:B8:78:0E';
+    await this.bleClient.getServices(macAddress)
+      .then(res=>{
+        console.log(res)
+        res.forEach(el=>{
+          console.log(el.uuid)
+          console.log(JSON.stringify(el.characteristics))
+        })
+        // console.log( 'Payload:decoder',new TextDecoder().decode(res))
+      })
+  }
+
   parseData(value: DataView): number {
     const flags = value.getUint8(0);
     const rate16Bits = flags & 0x1;
@@ -136,5 +160,34 @@ export class HomePage implements OnInit {
       heartRate = value.getUint8(1);
     }
     return heartRate;
+  }
+
+
+  decodeJ1939(dataView: DataView) {
+    const pgn = dataView.getUint32(0, false); // Читаем 4 байта начиная с позиции 0
+    const sourceAddress = dataView.getUint8(4); // Читаем 1 байт начиная с позиции 4
+    const destinationAddress = dataView.getUint8(5); // Читаем 1 байт начиная с позиции 5
+    const payload = new Uint8Array(dataView.buffer, dataView.byteOffset + 6, dataView.byteLength - 6); // Читаем оставшуюся часть данных
+
+    console.log('Декодированные данные J1939:');
+    console.log('PGN:', pgn);
+    console.log('Source Address:', sourceAddress);
+    console.log('Destination Address:', destinationAddress);
+    console.log('Payload:', payload);
+    console.log('JSon:', JSON.stringify(payload));
+    console.log( 'Payload:decoder', new TextDecoder().decode(payload))
+
+  }
+
+  decodeJ1708(dataView: DataView) {
+    const payload = new Uint8Array(dataView.buffer, dataView.byteOffset, dataView.byteLength); // Читаем все данные
+
+    // Обработка и интерпретация данных J1708
+    // ...
+
+    console.log('Декодированные данные J1708:');
+    console.log('Payload:', payload);
+    console.log('JSON:', JSON.stringify(payload));
+    console.log( 'Payload:decoder', new TextDecoder().decode(payload))
   }
 }
