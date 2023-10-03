@@ -6,6 +6,17 @@ const config: CapacitorConfig = {
   webDir: 'www',
   server: {
     androidScheme: 'https'
+  },
+  plugins: {
+    BleClient: {
+      request: true,
+      statusReceiver: true,
+      foregroundService: {
+        notificationTitle: "My App is running",
+        notificationText: "Foreground service keeps the app running while connected to a device",
+        notificationChannelName: "My App"
+      }
+    }
   }
 };
 

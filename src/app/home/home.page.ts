@@ -1,6 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {BleClient} from '@capacitor-community/bluetooth-le';
-import { BluetoothLe } from '@capacitor-community/bluetooth-le';
+import {BleClient, numberToUUID} from '@capacitor-community/bluetooth-le';
 
 import {Platform} from '@ionic/angular';
 
@@ -11,25 +10,24 @@ import {Platform} from '@ionic/angular';
 })
 export class HomePage implements OnInit {
   client: any
-  status:any = false
+  status: any = false
   bleClient = BleClient;
 
-  readonly goProControlAndQueryServiceUUID =
+  service = numberToUUID(0x1800)
+  read = '00002A00-0000-1000-8000-00805F9B34FB'
+
+  testUUID = '00001101-0000-1000-8000-00805F9B34FB'
+
+  goProControlAndQueryServiceUUID =
     '0000fea6-0000-1000-8000-00805f9b34fb'.toUpperCase();
+  readUUID =
+    '00009AFD-0000-1000-8000-00805f9b34fb'.toUpperCase();
+  goProWifiAccessPointServiceUUID =
+    'b5f90001-aa8d-11e3-9046-0002a5d5c51b'.toUpperCase();
 
-  readonly goProWifiAccessPointServiceUUID =
-    `b5f90001-aa8d-11e3-9046-0002a5d5c51b`.toUpperCase();
-
-  readonly goProCommandReqCharacteristicsUUID =
-    'b5f90072-aa8d-11e3-9046-0002a5d5c51b'.toUpperCase();
-
-  readonly goProWifiSSIDCharacteristicUUID =
-    `b5f90002-aa8d-11e3-9046-0002a5d5c51b`.toUpperCase();
-
-  readonly goProWifiPASSCharacteristicUUID =
-    `b5f90003-aa8d-11e3-9046-0002a5d5c51b`.toUpperCase();
   constructor(
-    private platform: Platform
+    private platform: Platform,
+    // private bleClient: BleClient
   ) {
   }
 
@@ -38,59 +36,105 @@ export class HomePage implements OnInit {
   }
 
   async initialize() {
-    // Check if location is enabled
     if (this.platform.is('android')) {
       const isLocationEnabled = await this.bleClient.isLocationEnabled();
-      this.status =  isLocationEnabled
+      this.status = isLocationEnabled
       console.log(isLocationEnabled)
       if (!isLocationEnabled) {
         await this.bleClient.openLocationSettings();
       }
-      this.status =  isLocationEnabled
+      this.status = isLocationEnabled
     }
     await this.bleClient.initialize({androidNeverForLocation: true});
-
   }
 
-  // async connect():void {
-  //   //   address: '98:35:14:32:12'
-  //   // }
-  //   // await BleClient.connect('sa')
-  //   //   .then(res=>{
-  //   //     console.log(res)
-  //   //   })
-  // }
 
-   async connect() {
-    try {
-      // Инициализация Bluetooth LE клиента
-
-      // Сканирование устройств
-      await this.bleClient.requestLEScan({ services:['0000180d-0000-1000-8000-00805f9b34fb',this.goProControlAndQueryServiceUUID, this.goProWifiAccessPointServiceUUID]},this.onBluetoothDeviceFound.bind(this))
-
-
-      // Поиск устройства по MAC-адресу
-      // const device = scanResult.devices.find(device => device.address === macAddress);
-
-      // if (device) {
-      //   // Подключение к устройству
-      //   await bleClient.connect(device.deviceId);
-      //
-      //   console.log('Успешно подключено к устройству по MAC-адресу:', macAddress);
-      //
-      //   // Здесь вы можете выполнять другие операции с подключенным устройством, такие как чтение и запись характеристик и т.д.
-      //
-      // } else {
-      //   console.log('Устройство с MAC-адресом', macAddress, 'не найдено.');
-      // }
+  async connect() {
+    // try {
     //
+    //   await this.bleClient.requestLEScan(
+    //     {
+    //     },
+    //     (result) => {
+    //       console.log('New scan result');
+    //       console.log('name - ',result.device.name)
+    //       console.log('deviceId - ',result.device.deviceId)
+    //       console.log('uuids - ',result.device.uuids)
+    //     }
+    //   );
+    //
+    //   setTimeout(async () => {
+    //     await this.bleClient.stopLEScan();
+    //     console.log('BLUE stopped scanning');
+    //   }, 20000);
+    // } catch (error) {
+    //   console.error(error);
+    // }
+
+    try {
+
+      const result = await this.bleClient.requestDevice();
+      console.log('start')
+      console.log(result.name)
+      console.log(result.deviceId)
+      console.log(result.uuids)
+
     } catch (error) {
-      console.error('Ошибка подключения к устройству:', error);
+      console.error('Bluetooth error:', error);
     }
   }
 
-  onBluetoothDeviceFound(result:any) {
+  onBluetoothDeviceFound(result: any) {
     console.log('received new scan result', result);
     // this.bluetoothScanResults.push(result);
+  }
+
+
+  async connectToDevice() {
+    try {
+      const macAddress: string = 'FC:29:99:B8:78:0E';
+
+      await this.bleClient.connect(macAddress);
+
+      console.log('Подключено к устройству:', macAddress);
+
+      const res = await this.bleClient.read(macAddress, this.service, this.read)
+
+      console.log('res 1 - ', res.getUint8(0))
+      console.log('res 2 - ', JSON.stringify(res))
+      // Подписываемся на изменения и получаем данные по J1939
+      await this.bleClient.startNotifications(macAddress,this.service,this.read,(res)=>{
+        console.log('current heart rate', this.parseData(res));
+      });
+      //
+      // this.bleClient.addListener('notifications', (notification) => {
+      //   const value = notification.value;
+      //   console.log('Получены данные J1939:', value);
+      //   // Обработка полученных данных J1939
+      // });
+      //
+      // // Подписываемся на изменения и получаем данные по J1708
+      // await this.bleClient.startNotifications({ serviceUUID: j1708ServiceUUID, characteristicUUID: j1708CharacteristicUUID });
+      //
+      // this.bleClient.addListener('notifications', (notification) => {
+      //   const value = notification.value;
+      //   console.log('Получены данные J1708:', value);
+      //   // Обработка полученных данных J1708
+      // });
+
+    } catch (error) {
+      console.error('Ошибка Bluetooth:', error);
+    }
+  }
+  parseData(value: DataView): number {
+    const flags = value.getUint8(0);
+    const rate16Bits = flags & 0x1;
+    let heartRate: number;
+    if (rate16Bits > 0) {
+      heartRate = value.getUint16(1, true);
+    } else {
+      heartRate = value.getUint8(1);
+    }
+    return heartRate;
   }
 }
