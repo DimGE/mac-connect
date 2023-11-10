@@ -93,45 +93,61 @@ export class HomePage implements OnInit {
   async connectToDevice() {
     try {
       const macAddress: string = 'FC:29:99:B8:78:0E';
-
       await this.bleClient.connect(macAddress);
-
       console.log('Подключено к устройству:', macAddress);
-
       const res = await this.bleClient.read(macAddress, this.service, this.read)
-
-      this.decodeJ1939(res)
       this.decodeJ1708(res)
-      console.log('parseData: ', this.parseData(res))
-
-      console.log('res 1 - ', res.getUint8(0))
-      console.log('res 2 - ', res)
-      // Подписываемся на изменения и получаем данные по J1939
-
-
-      // this.bleClient.addListener('notifications', (notification) => {
-      //   const value = notification.value;
-      //   console.log('Получены данные J1939:', value);
-      //   // Обработка полученных данных J1939
-      // });
-      //
-      // // Подписываемся на изменения и получаем данные по J1708
-      // await this.bleClient.startNotifications({ serviceUUID: j1708ServiceUUID, characteristicUUID: j1708CharacteristicUUID });
-      //
-      // this.bleClient.addListener('notifications', (notification) => {
-      //   const value = notification.value;
-      //   console.log('Получены данные J1708:', value);
-      //   // Обработка полученных данных J1708
-      // });
-
     } catch (error) {
       console.error('Ошибка Bluetooth:', error);
     }
   }
 
+
+
+  async connectToDevice2() {
+    try {
+      const macAddress: string = 'FC:29:99:B8:78:0E';
+      await this.bleClient.connect(macAddress);
+      console.log('Подключено к устройству:', macAddress);
+      const res = await this.bleClient.read(macAddress, this.service, '00002a01-0000-1000-8000-00805f9b34fb')
+      this.decodeJ1708(res)
+    } catch (error) {
+      console.error('Ошибка Bluetooth:', error);
+    }
+  }
+  async connectToDevice3() {
+    try {
+      const macAddress: string = 'FC:29:99:B8:78:0E';
+      await this.bleClient.connect(macAddress);
+      console.log('Подключено к устройству:', macAddress);
+      const res = await this.bleClient.read(macAddress, this.service, '00002a04-0000-1000-8000-00805f9b34fb')
+      this.decodeJ1708(res)
+    } catch (error) {
+      console.error('Ошибка Bluetooth:', error);
+    }
+  }
+  async connectToDevice4() {
+    try {
+      const macAddress: string = 'FC:29:99:B8:78:0E';
+      await this.bleClient.connect(macAddress);
+      console.log('Подключено к устройству:', macAddress);
+      const res = await this.bleClient.read(macAddress, this.service, '00002aa6-0000-1000-8000-00805f9b34fb')
+      this.decodeJ1708(res)
+    } catch (error) {
+      console.error('Ошибка Bluetooth:', error);
+    }
+  }
   async notification() {
     const macAddress: string = 'FC:29:99:B8:78:0E';
-    await this.bleClient.startNotifications(macAddress, this.service, this.read, (res) => {
+    await this.bleClient.startNotifications(macAddress, '6e400001-b5a3-f393-e0a9-e50e24dcca9e','6e400003-b5a3-f393-e0a9-e50e24dcca9e', (res) => {
+      console.log('current heart rate', this.parseData(res));
+      this.decodeJ1939(res)
+      this.decodeJ1708(res)
+    });
+  }
+  async notification2() {
+    const macAddress: string = 'FC:29:99:B8:78:0E';
+    await this.bleClient.startNotifications(macAddress, '6e400001-b5a3-f393-e0a9-e50e24dcca9e','6e400005-b5a3-f393-e0a9-e50e24dcca9e', (res) => {
       console.log('current heart rate', this.parseData(res));
       this.decodeJ1939(res)
       this.decodeJ1708(res)
